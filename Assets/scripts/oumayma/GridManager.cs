@@ -12,16 +12,14 @@ public class GridManager : MonoBehaviour
     public GameObject iceBlockPrefab;
     public GameObject wallPrefab;
     public GameObject floorPrefab;
-    public GameObject fruitPrefab; // NEW: Drag your Fruit prefab here
+    public GameObject fruitPrefab;
 
     [Header("Grid Data")]
     public int[,] gridData;
 
-    // Dictionary to track spawned ice blocks
     private Dictionary<Vector2Int, GameObject> iceBlockObjects = new Dictionary<Vector2Int, GameObject>();
     private Dictionary<Vector2Int, GameObject> fruitObjects = new Dictionary<Vector2Int, GameObject>();
 
-    // Grid codes
     public const int EMPTY = 0;
     public const int ICE_BLOCK = 1;
     public const int WALL = 2;
@@ -44,7 +42,6 @@ public class GridManager : MonoBehaviour
     {
         gridData = new int[gridWidth, gridHeight];
 
-        // Fill everything with EMPTY first
         for (int x = 0; x < gridWidth; x++)
         {
             for (int z = 0; z < gridHeight; z++)
@@ -53,7 +50,6 @@ public class GridManager : MonoBehaviour
             }
         }
 
-        // Create borders only
         for (int x = 0; x < gridWidth; x++)
         {
             gridData[x, 0] = WALL;
@@ -66,7 +62,6 @@ public class GridManager : MonoBehaviour
             gridData[gridWidth - 1, z] = WALL;
         }
 
-        // Add just a few ice blocks for testing
         gridData[5, 5] = ICE_BLOCK;
         gridData[6, 5] = ICE_BLOCK;
         gridData[5, 6] = ICE_BLOCK;
@@ -77,15 +72,13 @@ public class GridManager : MonoBehaviour
         gridData[9, 10] = ICE_BLOCK;
         gridData[10, 10] = ICE_BLOCK;
 
-        // Add fruits
         gridData[3, 3] = FRUIT;
-        gridData[4, 4] = FRUIT;
-        gridData[8, 8] = FRUIT;
+        gridData[11, 11] = FRUIT;
+        gridData[3, 11] = FRUIT;
     }
 
     void GenerateLevel()
     {
-        // Clear existing fruits
         foreach (var kvp in fruitObjects)
         {
             if (kvp.Value != null)
@@ -93,8 +86,6 @@ public class GridManager : MonoBehaviour
         }
         fruitObjects.Clear();
 
-
-        // Clear any existing ice block objects
         foreach (var kvp in iceBlockObjects)
         {
             if (kvp.Value != null)
@@ -132,41 +123,55 @@ public class GridManager : MonoBehaviour
             }
         }
 
-        int fruitCount = 0;
-        foreach (var kvp in fruitObjects)
-        {
-            fruitCount++;
-        }
-        GameManager.Instance.totalFruits = fruitCount;
+        GameManager.Instance.totalFruits = fruitObjects.Count;
+        Debug.Log($"Level generated with {fruitObjects.Count} fruits");
     }
-
 
     public void CollectFruit(int x, int z)
     {
-        if (IsValidPosition(x, z) && gridData[x, z] == FRUIT)
+        if (!IsValidPosition(x, z))
         {
-            gridData[x, z] = EMPTY;
+            Debug.LogError($"Invalid position for fruit collection: ({x}, {z})");
+            return;
+        }
 
-            Vector2Int key = new Vector2Int(x, z);
-            if (fruitObjects.ContainsKey(key))
+        if (gridData[x, z] != FRUIT)
+        {
+            Debug.LogWarning($"No fruit at position ({x}, {z}). Current tile type: {gridData[x, z]}");
+            return;
+        }
+
+        Debug.Log($"Collecting fruit at ({x}, {z})");
+
+        // Mark as empty IMMEDIATELY
+        gridData[x, z] = EMPTY;
+
+        Vector2Int key = new Vector2Int(x, z);
+
+        if (fruitObjects.ContainsKey(key))
+        {
+            if (fruitObjects[key] != null)
             {
-                if (fruitObjects[key] != null)
+                FruitCollection collection = fruitObjects[key].GetComponent<FruitCollection>();
+                if (collection != null)
                 {
-                    // Trigger collection animation
-                    FruitCollection collection = fruitObjects[key].GetComponent<FruitCollection>();
-                    if (collection != null)
-                    {
-                        collection.Collect();
-                    }
-                    else
-                    {
-                        Destroy(fruitObjects[key]);
-                    }
+                    collection.Collect();
                 }
-                fruitObjects.Remove(key);
+                else
+                {
+                    Debug.LogWarning("No FruitCollection script found, destroying immediately");
+                    Destroy(fruitObjects[key]);
+                }
             }
+
+            fruitObjects.Remove(key);
+        }
+        else
+        {
+            Debug.LogWarning($"Fruit at ({x}, {z}) not found in fruitObjects dictionary");
         }
     }
+
     public Vector3 GridToWorldPosition(int x, int z)
     {
         return gridOrigin + new Vector3(x * tileSize, 0, z * tileSize);
@@ -201,7 +206,6 @@ public class GridManager : MonoBehaviour
             {
                 if (iceBlockObjects[key] != null)
                 {
-                    // Check if it has the destruction script
                     IceBlockDestruction destruction = iceBlockObjects[key].GetComponent<IceBlockDestruction>();
                     if (destruction != null)
                     {
@@ -223,7 +227,6 @@ public class GridManager : MonoBehaviour
         {
             gridData[x, z] = ICE_BLOCK;
 
-            // Create the visual ice block
             Vector3 spawnPos = GridToWorldPosition(x, z);
             GameObject ice = Instantiate(iceBlockPrefab, spawnPos, Quaternion.identity, transform);
 
@@ -232,7 +235,6 @@ public class GridManager : MonoBehaviour
         }
     }
 
-    // Optional: Debug visualization
     void OnDrawGizmos()
     {
         if (gridData == null) return;
@@ -254,12 +256,13 @@ public class GridManager : MonoBehaviour
                     case WALL:
                         Gizmos.color = new Color(0.5f, 0.3f, 0, 0.8f);
                         break;
+                    case FRUIT:
+                        Gizmos.color = new Color(1, 0.5f, 0, 0.7f);
+                        break;
                 }
 
                 Gizmos.DrawCube(pos, Vector3.one * 0.9f);
             }
         }
     }
-
-   
 }

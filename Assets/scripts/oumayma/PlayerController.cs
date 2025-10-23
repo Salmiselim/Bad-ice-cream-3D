@@ -7,9 +7,9 @@ public class PlayerController : MonoBehaviour
     public float tileSize = 1f;
 
     [Header("Ice Mechanics")]
-    public int maxIceLineLength = 5; // How far ice can shoot
-    public float iceCreationDelay = 0.1f; // Delay between each ice block
-    public GameObject iceBlockPrefab; // Visual prefab for instant ice creation
+    public int maxIceLineLength = 5;
+    public float iceCreationDelay = 0.1f;
+    public GameObject iceBlockPrefab;
 
     [Header("References")]
     public GridManager gridManager;
@@ -17,7 +17,7 @@ public class PlayerController : MonoBehaviour
     private Vector3 targetPosition;
     private bool isMoving = false;
     private Vector2Int currentGridPos;
-    private Vector2Int facingDirection = Vector2Int.up; // Direction player is facing
+    private Vector2Int facingDirection = Vector2Int.up;
 
     [Header("Spawn Settings")]
     public Vector2Int spawnGridPosition = new Vector2Int(1, 1);
@@ -26,7 +26,7 @@ public class PlayerController : MonoBehaviour
     {
         if (gridManager == null)
         {
-            gridManager = FindObjectOfType<GridManager>();
+            gridManager = FindFirstObjectByType<GridManager>(); // FIXED: Updated deprecated method
         }
 
         StartCoroutine(InitializePlayer());
@@ -60,22 +60,22 @@ public class PlayerController : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow))
         {
-            moveDirection = new Vector2Int(0, 1); // Forward in grid (Z+)
+            moveDirection = new Vector2Int(0, 1);
             facingDirection = moveDirection;
         }
         else if (Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow))
         {
-            moveDirection = new Vector2Int(0, -1); // Back in grid (Z-)
+            moveDirection = new Vector2Int(0, -1);
             facingDirection = moveDirection;
         }
         else if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
         {
-            moveDirection = new Vector2Int(-1, 0); // Left (X-)
+            moveDirection = new Vector2Int(-1, 0);
             facingDirection = moveDirection;
         }
         else if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
         {
-            moveDirection = new Vector2Int(1, 0); // Right (X+)
+            moveDirection = new Vector2Int(1, 0);
             facingDirection = moveDirection;
         }
 
@@ -122,7 +122,6 @@ public class PlayerController : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            // Check what's in front of player
             Vector2Int checkPos = currentGridPos + facingDirection;
 
             if (!gridManager.IsValidPosition(checkPos.x, checkPos.y))
@@ -132,20 +131,13 @@ public class PlayerController : MonoBehaviour
 
             if (tileType == GridManager.ICE_BLOCK)
             {
-                // Destroy ice
-                DestroyIceLine();
+                StartCoroutine(DestroyIceLineCoroutine());
             }
             else if (tileType == GridManager.EMPTY)
             {
-                // Create ice
-                CreateIceLine();
+                StartCoroutine(CreateIceLineCoroutine());
             }
         }
-    }
-
-    void CreateIceLine()
-    {
-        StartCoroutine(CreateIceLineCoroutine());
     }
 
     System.Collections.IEnumerator CreateIceLineCoroutine()
@@ -155,7 +147,6 @@ public class PlayerController : MonoBehaviour
 
         while (blocksCreated < maxIceLineLength)
         {
-            // Check if position is valid
             if (!gridManager.IsValidPosition(checkPos.x, checkPos.y))
             {
                 Debug.Log("Ice creation stopped: Hit boundary");
@@ -164,29 +155,24 @@ public class PlayerController : MonoBehaviour
 
             int tileType = gridManager.gridData[checkPos.x, checkPos.y];
 
-            // Stop if we hit a wall or existing ice block
             if (tileType == GridManager.WALL || tileType == GridManager.ICE_BLOCK)
             {
                 Debug.Log($"Ice creation stopped: Hit obstacle at {checkPos}");
                 break;
             }
 
-            // Create ice block
             if (tileType == GridManager.EMPTY)
             {
                 gridManager.CreateIceBlock(checkPos.x, checkPos.y);
                 Debug.Log($"Created ice block at {checkPos}");
                 blocksCreated++;
 
-                // Wait before creating next block
                 yield return new WaitForSeconds(iceCreationDelay);
 
-                // Move to next position
                 checkPos += facingDirection;
             }
             else
             {
-                // Hit something else (future: enemy, fruit)
                 Debug.Log($"Ice creation stopped: Hit object at {checkPos}");
                 break;
             }
@@ -198,46 +184,81 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    void DestroyIceLine()
+    System.Collections.IEnumerator DestroyIceLineCoroutine()
     {
         Vector2Int checkPos = currentGridPos + facingDirection;
+        int blocksDestroyed = 0;
 
-        // Destroy ice blocks one by one in the direction player is facing
         while (gridManager.IsValidPosition(checkPos.x, checkPos.y))
         {
             int tileType = gridManager.gridData[checkPos.x, checkPos.y];
 
             if (tileType == GridManager.ICE_BLOCK)
             {
-                // Destroy this ice block
                 gridManager.DestroyIceBlock(checkPos.x, checkPos.y);
                 Debug.Log($"Destroyed ice block at {checkPos}");
+                blocksDestroyed++;
 
-                // Move to next position
+                yield return new WaitForSeconds(iceCreationDelay);
+
                 checkPos += facingDirection;
             }
             else
             {
-                // Stop when we hit non-ice
+                Debug.Log($"Ice destruction stopped: Hit non-ice at {checkPos}");
                 break;
             }
+        }
+
+        if (blocksDestroyed > 0)
+        {
+            Debug.Log($"Destroyed {blocksDestroyed} ice blocks total");
         }
     }
 
     void OnTriggerEnter(Collider other)
     {
-        Debug.Log($"Collision detected with: {other.gameObject.name}, Tag: {other.tag}");
         if (other.CompareTag("Fruit"))
         {
+            Debug.Log($"Collision with: {other.gameObject.name}");
+
             Vector2Int fruitGridPos = gridManager.WorldToGridPosition(other.transform.position);
-            Debug.Log($"Attempting to collect fruit at grid position: {fruitGridPos}");
-            gridManager.CollectFruit(fruitGridPos.x, fruitGridPos.y);
+            Debug.Log($"Fruit grid position: {fruitGridPos}");
+
+            // Check if valid position
+            if (!gridManager.IsValidPosition(fruitGridPos.x, fruitGridPos.y))
+            {
+                Debug.LogWarning("Invalid grid position!");
+                return;
+            }
+
+            // Check if tile is actually a fruit
+            int tileType = gridManager.gridData[fruitGridPos.x, fruitGridPos.y];
+
+            if (tileType != GridManager.FRUIT)
+            {
+                Debug.LogWarning($"Tile at {fruitGridPos} is not a fruit! Type: {tileType}");
+                return;
+            }
+
+            Debug.Log($"Valid fruit at {fruitGridPos}, collecting...");
+
+            // Get points
             FruitCollection fruitScript = other.GetComponent<FruitCollection>();
+            int points = 10;
             if (fruitScript != null)
             {
-                GameManager.Instance.AddScore(fruitScript.points);
+                points = fruitScript.points;
             }
-            GameManager.Instance.CollectFruit();
+
+            // Update game state
+            GameManager.Instance.AddScore(points);
+            GameManager.Instance.CollectFruit(fruitGridPos.x, fruitGridPos.y); // FIXED: Added x, z parameters
+
+            // Trigger collection animation
+            gridManager.CollectFruit(fruitGridPos.x, fruitGridPos.y);
+
+            Debug.Log($"Fruit collection complete. Score: {GameManager.Instance.currentScore}, Collected: {GameManager.Instance.fruitsCollected}/{GameManager.Instance.totalFruits}");
         }
     }
 }
