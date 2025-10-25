@@ -46,6 +46,7 @@ public class FruitCollection : MonoBehaviour
 
     public void Collect()
     {
+        if (!GameManager.Instance.IsGameActive) return;
         if (isCollecting)
         {
             Debug.Log("Fruit already collecting, ignoring duplicate call");

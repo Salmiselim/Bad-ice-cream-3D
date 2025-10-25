@@ -48,6 +48,7 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        if (!GameManager.Instance.IsGameActive) return;
         HandleInput();
         MoveToTarget();
         HandleIceAction();
@@ -219,6 +220,7 @@ public class PlayerController : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
+        if (!GameManager.Instance.IsGameActive) return;
         if (other.CompareTag("Fruit"))
         {
             Debug.Log($"Collision with: {other.gameObject.name}");

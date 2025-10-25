@@ -52,6 +52,7 @@ public class GridEnemy : MonoBehaviour
 
     void Update()
     {
+        if (!GameManager.Instance.IsGameActive) return;
         if (isMoving)
         {
             MoveToTarget();

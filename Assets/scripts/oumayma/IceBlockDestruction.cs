@@ -2,6 +2,7 @@ using UnityEngine;
 
 public class IceBlockDestruction : MonoBehaviour
 {
+
     [Header("Destruction Settings")]
     public float shrinkDuration = 0.25f;
     public AnimationCurve shrinkCurve = AnimationCurve.EaseInOut(0, 1, 1, 0);

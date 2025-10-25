@@ -20,6 +20,9 @@ public class GameManager : MonoBehaviour
     private int currentLives;
 
 
+    public bool IsGameActive => isGameActive;  // ADD THIS LINE
+
+
     void Awake()
     {
         if (Instance == null)
