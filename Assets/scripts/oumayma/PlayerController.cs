@@ -14,13 +14,14 @@ public class PlayerController : MonoBehaviour
     [Header("References")]
     public GridManager gridManager;
 
-    private Vector3 targetPosition;
+    public Vector3 targetPosition;
     private bool isMoving = false;
-    private Vector2Int currentGridPos;
+    public Vector2Int currentGridPos;
     private Vector2Int facingDirection = Vector2Int.up;
 
     [Header("Spawn Settings")]
     public Vector2Int spawnGridPosition = new Vector2Int(1, 1);
+
 
     void Start()
     {

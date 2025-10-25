@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using TMPro;
 
 public class UIManager : MonoBehaviour
@@ -8,6 +8,7 @@ public class UIManager : MonoBehaviour
     [Header("UI References")]
     public TextMeshProUGUI scoreText;
     public TextMeshProUGUI timerText;
+    public TextMeshProUGUI livesText; // ← ADD THIS LINE
     public GameObject gameOverPanel;
     public GameObject winPanel;
 
@@ -34,8 +35,32 @@ public class UIManager : MonoBehaviour
 
         UpdateScore(0);
         UpdateTimer(20f);
+        UpdateLives(3); // ← ADD THIS LINE
     }
 
+
+
+    // ADD THIS METHOD
+    public void UpdateLives(int lives)
+    {
+        if (livesText != null)
+        {
+            livesText.text = $"Lives: {lives}";
+
+            if (lives == 1)
+            {
+                livesText.color = Color.red;
+            }
+            else if (lives == 2)
+            {
+                livesText.color = Color.yellow;
+            }
+            else
+            {
+                livesText.color = Color.white;
+            }
+        }
+    }
     public void UpdateScore(int score)
     {
         if (scoreText != null)

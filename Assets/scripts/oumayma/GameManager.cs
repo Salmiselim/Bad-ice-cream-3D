@@ -15,6 +15,11 @@ public class GameManager : MonoBehaviour
     private float timeRemaining;
     private bool isGameActive = true;
 
+    [Header("Player Lives")] // ADD THIS SECTION
+    public int playerLives = 3;
+    private int currentLives;
+
+
     void Awake()
     {
         if (Instance == null)
@@ -32,11 +37,19 @@ public class GameManager : MonoBehaviour
     {
         timeRemaining = levelTime;
         isGameActive = true;
+
+        currentLives = playerLives; // ADD THIS
+
+        // Update UI
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.UpdateLives(currentLives); // ADD THIS
+        }
     }
 
-   
 
-   
+
+
 
     void ShowLevelComplete()
     {
@@ -79,7 +92,10 @@ public class GameManager : MonoBehaviour
         Debug.Log($"Score: {currentScore}");
 
         // Update UI
-        UIManager.Instance.UpdateScore(currentScore);
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.UpdateScore(currentScore);
+        }
     }
 
     public void CollectFruit(int x, int z)
@@ -93,13 +109,65 @@ public class GameManager : MonoBehaviour
         }
     }
 
+
+    public void PlayerDied()
+    {
+        if (!isGameActive) return;
+
+        currentLives--;
+        Debug.Log($"Player died! Lives remaining: {currentLives}");
+
+        // Update UI
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.UpdateLives(currentLives);
+        }
+
+        if (currentLives <= 0)
+        {
+            GameOver();
+        }
+        else
+        {
+            // Respawn player with brief delay ( i put no delay 0f you can modify it later hihihihi)
+            Invoke("RespawnPlayer", 0f);
+        }
+    }
+
+
+
+    // ADD THIS METHOD - Respawn player at spawn point
+    void RespawnPlayer()
+    {
+        Debug.Log("Respawning player...");
+
+        PlayerController player = FindFirstObjectByType<PlayerController>();
+        if (player != null)
+        {
+            // Reset position to spawn
+            player.currentGridPos = player.spawnGridPosition;
+            Vector3 spawnPos = player.gridManager.GridToWorldPosition(
+                player.spawnGridPosition.x,
+                player.spawnGridPosition.y
+            );
+            spawnPos.y = player.transform.position.y;
+            player.transform.position = spawnPos;
+            player.targetPosition = spawnPos;
+
+            Debug.Log($"Player respawned at {player.spawnGridPosition}");
+        }
+    }
+
     void LevelComplete()
     {
         Debug.Log("=== LEVEL COMPLETE ===");
         isGameActive = false;
 
         // Show win panel
-        UIManager.Instance.ShowWin();
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.ShowWin();
+        }
     }
 
     void GameOver()
@@ -108,7 +176,10 @@ public class GameManager : MonoBehaviour
         isGameActive = false;
 
         // Show game over panel
-        UIManager.Instance.ShowGameOver();
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.ShowGameOver();
+        }
     }
 
     void RestartLevel()
@@ -125,6 +196,7 @@ public class GameManager : MonoBehaviour
         fruitsCollected = 0;
         totalFruits = 0;
         timeRemaining = levelTime;
+        currentLives = playerLives;
         isGameActive = true;
     }
 }
