@@ -99,6 +99,12 @@ public class PlayerController : MonoBehaviour
                 targetPosition = gridManager.GridToWorldPosition(currentGridPos.x, currentGridPos.y);
                 targetPosition.y = transform.position.y;
                 isMoving = true;
+
+                if (direction != Vector2Int.zero)
+                {
+                    Vector3 lookDirection = new Vector3(direction.x, 0, direction.y);
+                    transform.rotation = Quaternion.LookRotation(lookDirection);
+                }
             }
         }
     }
