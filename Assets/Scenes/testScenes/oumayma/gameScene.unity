@@ -672,6 +672,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 4844746384864239178, guid: 0f7201a3d2b512f478a67d42570c13f8, type: 3}
+      propertyPath: animator
+      value: 
+      objectReference: {fileID: 1773917736}
     - target: {fileID: 7172886465293155812, guid: 0f7201a3d2b512f478a67d42570c13f8, type: 3}
       propertyPath: m_Name
       value: IcecreamCharAnimated
@@ -719,7 +723,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7172886465293155812, guid: 0f7201a3d2b512f478a67d42570c13f8, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1773917736}
   m_SourcePrefab: {fileID: 100100000, guid: 0f7201a3d2b512f478a67d42570c13f8, type: 3}
 --- !u!1 &1214865748
 GameObject:
@@ -1439,6 +1446,33 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1695510599}
   m_CullTransparentMesh: 1
+--- !u!1 &1773917731 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7172886465293155812, guid: 0f7201a3d2b512f478a67d42570c13f8, type: 3}
+  m_PrefabInstance: {fileID: 1183871382}
+  m_PrefabAsset: {fileID: 0}
+--- !u!95 &1773917736
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1773917731}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 1e3fea3785491274196b3131b6a98f17, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &1832661576
 GameObject:
   m_ObjectHideFlags: 0

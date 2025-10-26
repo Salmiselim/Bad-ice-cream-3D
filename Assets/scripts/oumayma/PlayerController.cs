@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
@@ -13,6 +13,8 @@ public class PlayerController : MonoBehaviour
 
     [Header("References")]
     public GridManager gridManager;
+    public Animator animator; // ← ADD THIS LINE
+
 
     public Vector3 targetPosition;
     private bool isMoving = false;
@@ -29,7 +31,11 @@ public class PlayerController : MonoBehaviour
         {
             gridManager = FindFirstObjectByType<GridManager>(); // FIXED: Updated deprecated method
         }
-
+        // ADD THESE LINES
+        if (animator == null)
+        {
+            animator = GetComponent<Animator>();
+        }
         StartCoroutine(InitializePlayer());
     }
 
@@ -52,8 +58,19 @@ public class PlayerController : MonoBehaviour
         HandleInput();
         MoveToTarget();
         HandleIceAction();
+        UpdateAnimation(); // ← ADD THIS LINE
+
     }
 
+
+    void UpdateAnimation()
+    {
+        if (animator != null)
+        {
+            // Set isWalking to true if player is moving
+            animator.SetBool("isWalking", isMoving);
+        }
+    }
     void HandleInput()
     {
         if (isMoving) return;
