@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 6147053221280530392}
   - component: {fileID: 3617224201294508576}
   - component: {fileID: -1916059013538278209}
+  - component: {fileID: 1618113552616089044}
   m_Layer: 0
   m_Name: IceCube
   m_TagString: Untagged
@@ -151,3 +152,22 @@ MonoBehaviour:
     m_RotationOrder: 4
   addRotation: 1
   rotationSpeed: 180
+--- !u!114 &1618113552616089044
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6346982537498217272}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1cc998dd44e3de247998548c8edb78fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DestructibleBlock
+  destructionEffectPrefab: {fileID: 8612845780449369481, guid: 0ad1b88955d9dc84c9baf4b00f3d8f57, type: 3}
+  fragmentPrefab: {fileID: 0}
+  fragmentCount: 50
+  fragmentSize: 0.2
+  explosionForce: 10
+  explosionRadius: 1
+  objectDestroyDelay: 0.05

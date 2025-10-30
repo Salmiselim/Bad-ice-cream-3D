@@ -1,122 +1,76 @@
 using UnityEngine;
+using System.Collections;
 
 public class FruitCollection : MonoBehaviour
 {
-    [Header("Collection Settings")]
-    public float collectDuration = 0.3f;
+    [Header("Collection")]
+    public float collectDuration = 0.25f;
     public int points = 10;
 
-    private Renderer fruitRenderer;
+    private Collider col;
+    private Renderer rend;
+    private Material mat;
     private bool isCollecting = false;
-    private Collider fruitCollider;
-    private Material fruitMaterial;
+    private GridManager gridManager;
 
     void Start()
     {
-        // Try multiple ways to find the renderer
-        fruitRenderer = GetComponent<Renderer>();
-        if (fruitRenderer == null)
-        {
-            fruitRenderer = GetComponentInChildren<Renderer>();
-        }
+        col = GetComponent<Collider>() ?? GetComponentInChildren<Collider>();
+        if (col != null) col.isTrigger = true;
+        rend = GetComponent<Renderer>() ?? GetComponentInChildren<Renderer>();
+        if (rend != null) mat = new Material(rend.material);
 
-        // Get collider to disable it when collecting
-        fruitCollider = GetComponent<Collider>();
-        if (fruitCollider == null)
-        {
-            fruitCollider = GetComponentInChildren<Collider>();
-        }
+        if (rend != null) rend.material = mat;
 
-        // Create a copy of the material so we don't affect the original
-        if (fruitRenderer != null)
-        {
-            fruitMaterial = fruitRenderer.material;
-        }
+        gridManager = FindObjectOfType<GridManager>();
+        if (gridManager == null) Debug.LogError("FruitCollection: GridManager not found.");
+    }
 
-        // Debug to see if everything is found
-        if (fruitRenderer == null)
-        {
-            Debug.LogError($"No Renderer found on fruit: {gameObject.name}");
-        }
-        if (fruitCollider == null)
-        {
-            Debug.LogWarning($"No Collider found on fruit: {gameObject.name}");
-        }
+    void OnTriggerEnter(Collider other)
+    {
+        if (isCollecting) return;
+        if (!other.CompareTag("Player")) return;
+        Collect();
     }
 
     public void Collect()
     {
-        if (!GameManager.Instance.IsGameActive) return;
-        if (isCollecting)
-        {
-            Debug.Log("Fruit already collecting, ignoring duplicate call");
-            return;
-        }
+        if (isCollecting) return;
+        if (GameManager.Instance == null || !GameManager.Instance.IsGameActive) return;
 
         isCollecting = true;
+        if (col != null) col.enabled = false;
 
-        // IMMEDIATELY disable collider to prevent double-collection
-        if (fruitCollider != null)
+        // give points
+        if (GameManager.Instance != null) GameManager.Instance.AddScore(points);
+
+        // notify grid manager to remove/clean up
+        if (gridManager != null)
         {
-            fruitCollider.enabled = false;
-            Debug.Log($"Disabled collider on fruit: {gameObject.name}");
+            Vector2Int gridPos = gridManager.WorldToGridPosition(transform.position);
+            gridManager.CollectFruit(gridPos.x, gridPos.y);
         }
 
         StartCoroutine(CollectAnimation());
     }
 
-    System.Collections.IEnumerator CollectAnimation()
+    IEnumerator CollectAnimation()
     {
         float elapsed = 0f;
         Vector3 startScale = transform.localScale;
-
-        // Check if material supports color changes
-        bool canFade = false;
-        Color startColor = Color.white;
-
-        if (fruitMaterial != null)
-        {
-            // Try different common color properties
-            if (fruitMaterial.HasProperty("_Color"))
-            {
-                startColor = fruitMaterial.color;
-                canFade = true;
-            }
-            else if (fruitMaterial.HasProperty("_BaseColor"))
-            {
-                startColor = fruitMaterial.GetColor("_BaseColor");
-                canFade = true;
-            }
-        }
-
         while (elapsed < collectDuration)
         {
             elapsed += Time.deltaTime;
             float t = elapsed / collectDuration;
-
-            // Scale down with ease-in
             transform.localScale = Vector3.Lerp(startScale, Vector3.zero, t);
-
-            // Fade out (only if material supports it)
-            if (canFade && fruitMaterial != null)
+            if (mat != null)
             {
-                Color newColor = startColor;
-                newColor.a = Mathf.Lerp(1f, 0f, t);
-
-                if (fruitMaterial.HasProperty("_Color"))
-                {
-                    fruitMaterial.color = newColor;
-                }
-                else if (fruitMaterial.HasProperty("_BaseColor"))
-                {
-                    fruitMaterial.SetColor("_BaseColor", newColor);
-                }
+                Color c = mat.HasProperty("_Color") ? mat.color : Color.white;
+                c.a = Mathf.Lerp(1f, 0f, t);
+                if (mat.HasProperty("_Color")) mat.color = c;
             }
-
             yield return null;
         }
-
-        Debug.Log($"Destroying fruit: {gameObject.name}");
         Destroy(gameObject);
     }
 }

@@ -140,3 +140,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FruitCollection
   collectDuration: 0.3
   points: 10
+  gridManager: {fileID: 0}
