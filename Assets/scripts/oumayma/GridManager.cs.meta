@@ -1,2 +1,16 @@
 fileFormatVersion: 2
 guid: 370199aaaabebbd42a85918c5f11764a
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - iceBlockPrefab: {fileID: 6346982537498217272, guid: 7f3c551f1b318b64eba9bf46108029a6, type: 3}
+  - wallPrefab: {fileID: 2691073479381373378, guid: 6a9c7f0ed1a51274a93a913bec8d3ca8, type: 3}
+  - floorPrefab: {fileID: 2298622683062900538, guid: 6bb7fad4af103cd41a5b86546e913a52, type: 3}
+  - fruitPrefabPhase1: {fileID: 1846816979260804118, guid: e886a0a263c15414093668db3725b535, type: 3}
+  - fruitPrefabPhase2: {fileID: 1638444836145330, guid: 031f4f4b1f7d8b7489da0919e18ceac3, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
