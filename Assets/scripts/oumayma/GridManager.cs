@@ -1,28 +1,17 @@
-﻿using UnityEngine;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using Unity.Netcode;
+using UnityEngine;
+using UnityEngine.InputSystem;
 
-public class GridManager : MonoBehaviour
+public class GridManager : NetworkBehaviour
 {
     public static GridManager Instance;
 
-    [Header("Grid Settings")]
-    public int gridWidth = 15;
-    public int gridHeight = 15;
-    public float tileSize = 1f;
-
-    [Header("Prefabs")]
-    public GameObject iceBlockPrefab;
-    public GameObject wallPrefab;
-    public GameObject floorPrefab;
-
-    [Tooltip("Fruit prefab used in phase 1")]
-    public GameObject fruitPrefabPhase1;
-
-    [Tooltip("Fruit prefab used in phase 2")]
-    public GameObject fruitPrefabPhase2;
 
     [Header("Grid Data")]
     public int[,] gridData;
+
+
 
     // Track spawned objects so we can remove them later
     public Dictionary<Vector2Int, GameObject> iceBlockObjects = new Dictionary<Vector2Int, GameObject>();
@@ -33,12 +22,7 @@ public class GridManager : MonoBehaviour
     public const int WALL = 2;
     public const int FRUIT = 3;
 
-    private Vector3 gridOrigin;
 
-    // Phase & timer
-    private bool phase2Started = false;
-    public float phase1Timer { get; private set; } = 0f;
-    private bool isPhase1TimerRunning = false;
 
     void Awake()
     {
@@ -59,7 +43,7 @@ public class GridManager : MonoBehaviour
         if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == "level2")
             return;
         GenerateLevel();
-        
+
         // Start phase 1 timer
         phase1Timer = 0f;
         isPhase1TimerRunning = true;
@@ -67,10 +51,18 @@ public class GridManager : MonoBehaviour
 
     void Update()
     {
+   
         if (isPhase1TimerRunning)
             phase1Timer += Time.deltaTime;
     }
 
+
+    #region Grid
+
+    [Header("Grid Settings")]
+    public int gridWidth = 15;
+    public int gridHeight = 15;
+    public float tileSize = 1f;
     void InitializeGrid()
     {
         gridData = new int[gridWidth, gridHeight];
@@ -102,6 +94,13 @@ public class GridManager : MonoBehaviour
     }
 
     // Instantiate objects from gridData and populate the dictionaries
+
+    #endregion
+
+    // Phase & timer
+    private bool phase2Started = false;
+    public float phase1Timer { get; private set; } = 0f;
+    private bool isPhase1TimerRunning = false;
     public void GenerateLevel()
     {
         // clear previously spawned fruit objects & clear dict
@@ -122,13 +121,7 @@ public class GridManager : MonoBehaviour
                 Vector3 spawnPos = GridToWorldPosition(x, z);
                 switch (gridData[x, z])
                 {
-                    case ICE_BLOCK:
-                        if (iceBlockPrefab != null)
-                        {
-                            GameObject ice = Instantiate(iceBlockPrefab, spawnPos, Quaternion.identity, transform);
-                            iceBlockObjects[new Vector2Int(x, z)] = ice;
-                        }
-                        break;
+                   
                     case WALL:
                         if (wallPrefab != null)
                             Instantiate(wallPrefab, spawnPos, Quaternion.identity, transform);
@@ -151,6 +144,13 @@ public class GridManager : MonoBehaviour
             GameManager.Instance.totalFruits = fruitObjects.Count;
     }
 
+    #region fruit
+
+    [Tooltip("Fruit prefab used in phase 1")]
+    public GameObject fruitPrefabPhase1;
+
+    [Tooltip("Fruit prefab used in phase 2")]
+    public GameObject fruitPrefabPhase2;
     // Add an existing instantiated fruit GameObject into the grid tracking
     public void AddFruit(int x, int z, GameObject fruit)
     {
@@ -216,6 +216,9 @@ public class GridManager : MonoBehaviour
         }
     }
 
+
+    #region fruit Phase 2
+
     // Starts phase 2: spawn fruits using phase2 prefab in chosen positions
     private void StartPhase2()
     {
@@ -240,6 +243,15 @@ public class GridManager : MonoBehaviour
         if (GameManager.Instance != null)
             GameManager.Instance.totalFruits = fruitObjects.Count;
     }
+    #endregion
+    #endregion
+
+
+    [Header("Prefabs")]
+    public GameObject iceBlockPrefab;
+    public GameObject wallPrefab;
+    public GameObject floorPrefab;
+    #region Ice Block
 
     // Primary destruction method: call to remove an ice block and play its destruction effect.
     public void DestroyIceBlock(int x, int z)
@@ -315,7 +327,60 @@ public class GridManager : MonoBehaviour
             iceBlockObjects[new Vector2Int(x, z)] = ice;
         }
     }
+    public void CreateIceBlockNetworked(int x, int z)
+    {
+        if (!IsServer) return; // only the server spawns networked objects
+        if (!IsValidPosition(x, z)) return;
+        if (gridData[x, z] != EMPTY) return;
 
+        gridData[x, z] = ICE_BLOCK;
+
+        Vector3 spawnPos = GridToWorldPosition(x, z);
+        if (iceBlockPrefab != null)
+        {
+            // Instantiate on server
+            GameObject ice = Instantiate(iceBlockPrefab, spawnPos, Quaternion.identity, transform);
+
+            // Make sure prefab has a NetworkObject!
+            NetworkObject netObj = ice.GetComponent<NetworkObject>();
+            if (netObj != null)
+            {
+                netObj.Spawn(); // this replicates it to all clients
+            }
+
+            iceBlockObjects[new Vector2Int(x, z)] = ice;
+        }
+    }
+
+    public void DestroyIceBlockNetworked(int x, int z)
+    {
+        if (!IsServer) return;
+        if (!IsValidPosition(x, z)) return;
+        if (gridData[x, z] != ICE_BLOCK) return;
+
+        gridData[x, z] = EMPTY;
+        Vector2Int key = new Vector2Int(x, z);
+
+        if (iceBlockObjects.TryGetValue(key, out GameObject obj))
+        {
+            iceBlockObjects.Remove(key);
+
+            if (obj != null)
+            {
+                NetworkObject netObj = obj.GetComponent<NetworkObject>();
+                if (netObj != null && netObj.IsSpawned)
+                    netObj.Despawn(); // remove it from all clients
+                else
+                    Destroy(obj);
+            }
+        }
+    }
+    #endregion
+
+
+    #region Other 
+
+    private Vector3 gridOrigin;
     public Vector3 GridToWorldPosition(int x, int z)
     {
         return gridOrigin + new Vector3(x * tileSize, 0f, z * tileSize);
@@ -357,4 +422,6 @@ public class GridManager : MonoBehaviour
                 Gizmos.DrawCube(pos, Vector3.one * 0.9f);
             }
     }
+    #endregion
+
 }

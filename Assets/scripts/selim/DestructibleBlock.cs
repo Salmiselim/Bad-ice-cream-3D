@@ -98,10 +98,7 @@ public class DestructibleBlock : MonoBehaviour
         }
 
         // Notify GridManager in case the block was destroyed directly (idempotent)
-        if (GridManager.Instance != null)
-        {
-            GridManager.Instance.NotifyIceBlockDestroyedAtWorldPos(transform.position);
-        }
+   
 
         // destroy the block object after tiny delay
         Destroy(gameObject, objectDestroyDelay);

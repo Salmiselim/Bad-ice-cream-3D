@@ -1,6 +1,7 @@
-﻿using UnityEngine;
+﻿using Unity.Netcode;
+using UnityEngine;
 
-public class PlayerController : MonoBehaviour
+public class PlayerController : NetworkBehaviour
 {
     [Header("Movement Settings")]
     public float moveSpeed = 8f;
@@ -54,6 +55,7 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        if (!IsOwner) return;
         if (!GameManager.Instance.IsGameActive) return;
         HandleInput();
         MoveToTarget();
@@ -73,6 +75,7 @@ public class PlayerController : MonoBehaviour
     }
     void HandleInput()
     {
+        if (!IsOwner) return;
         if (isMoving) return;
 
         Vector2Int moveDirection = Vector2Int.zero;
@@ -188,7 +191,7 @@ public class PlayerController : MonoBehaviour
 
             if (tileType == GridManager.EMPTY)
             {
-                gridManager.CreateIceBlock(checkPos.x, checkPos.y);
+                RequestCreateIceBlockServerRpc(checkPos.x, checkPos.y);
                 Debug.Log($"Created ice block at {checkPos}");
                 blocksCreated++;
 
@@ -220,7 +223,7 @@ public class PlayerController : MonoBehaviour
 
             if (tileType == GridManager.ICE_BLOCK)
             {
-                gridManager.DestroyIceBlock(checkPos.x, checkPos.y);
+                RequestDestroyIceBlockServerRpc(checkPos.x, checkPos.y);
                 Debug.Log($"Destroyed ice block at {checkPos}");
                 blocksDestroyed++;
 
@@ -240,7 +243,19 @@ public class PlayerController : MonoBehaviour
             Debug.Log($"Destroyed {blocksDestroyed} ice blocks total");
         }
     }
+    [ServerRpc]
+    private void RequestCreateIceBlockServerRpc(int x, int y)
+    {
+        if (GridManager.Instance != null)
+            GridManager.Instance.CreateIceBlockNetworked(x, y);
+    }
 
+    [ServerRpc]
+    private void RequestDestroyIceBlockServerRpc(int x, int y)
+    {
+        if (GridManager.Instance != null)
+            GridManager.Instance.DestroyIceBlockNetworked(x, y);
+    }
     void OnTriggerEnter(Collider other)
     {
         if (!GameManager.Instance.IsGameActive) return;

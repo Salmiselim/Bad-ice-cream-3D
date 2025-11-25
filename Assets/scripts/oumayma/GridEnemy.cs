@@ -17,6 +17,8 @@ public class GridEnemy : MonoBehaviour
     private Vector2Int currentGridPos;
     private float nextThinkTime = 0f;
 
+
+
     void Start()
     {
         if (gridManager == null)
@@ -24,7 +26,7 @@ public class GridEnemy : MonoBehaviour
             gridManager = FindFirstObjectByType<GridManager>();
         }
 
-        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null)
         {
             player = playerObj.transform;

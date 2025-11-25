@@ -1,7 +1,8 @@
 using UnityEngine;
 using System.Collections;
+using Unity.Netcode;
 
-public class IceBlockDestruction : MonoBehaviour
+public class IceBlockDestruction : NetworkBehaviour
 {
     [Header("Destruction Settings")]
     public float shrinkDuration = 0.25f;
@@ -70,7 +71,7 @@ public class IceBlockDestruction : MonoBehaviour
             Vector2Int gridPos = GridManager.Instance.WorldToGridPosition(pos);
 
             // mark this block destroyed in grid
-            GridManager.Instance.NotifyIceBlockDestroyed(gridPos.x, gridPos.y);
+    
 
             // try to spawn Phase 2 fruit if prefab exists
             if (GridManager.Instance.fruitPrefabPhase2 != null)
