@@ -5,6 +5,7 @@ using Unity.Services.Authentication;
 using Unity.Services.Core;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class Authmanager : MonoBehaviour
 {
@@ -15,6 +16,7 @@ public class Authmanager : MonoBehaviour
     public GameObject signUpPanel;
     public TMP_InputField signUpUsernameInput;
     public TMP_InputField signUpPasswordInput;
+    public TMP_InputField signUpConfirmPasswordInput;
     public Button signUpButton;
 
     [Header("Sign In Panel")]
@@ -27,18 +29,20 @@ public class Authmanager : MonoBehaviour
     public Button signOutButton;
     public Button switchToSignInButton;
     public Button switchToSignUpButton;
-    public Button emergencySignOutButton; // Always visible emergency sign out
+    public Button emergencySignOutButton;
+
+    [Header("Scene Transition")]
+    public string gameSceneName = "GameScene";
+    public float transitionDelay = 1.5f;
 
     [Header("Testing")]
-    public bool forceSignOutOnStart = true; // ENABLED by default for testing
-    public Button debugButton; // Optional: Add a debug button to show player info
+    public bool forceSignOutOnStart = true;
+    public Button debugButton;
 
     async void Start()
     {
-        // Show loading
         statusText.text = "Initializing...";
 
-        // Initialize Unity Services
         await UnityServices.InitializeAsync();
 
         // FOR TESTING: Force sign out if checkbox is enabled
@@ -52,11 +56,14 @@ public class Authmanager : MonoBehaviour
         if (AuthenticationService.Instance.IsSignedIn)
         {
             ShowSignedInState();
+            // Automatically transition to game scene
+            await TransitionToGameScene();
         }
         else
         {
             statusText.text = "Ready! Please sign up or sign in.";
             ShowSignUpPanel();
+            EnableAllButtons();
         }
 
         // Setup button listeners
@@ -66,55 +73,38 @@ public class Authmanager : MonoBehaviour
         switchToSignInButton.onClick.AddListener(ShowSignInPanel);
         switchToSignUpButton.onClick.AddListener(ShowSignUpPanel);
 
-        // Emergency sign out (always available)
         if (emergencySignOutButton != null)
         {
             emergencySignOutButton.onClick.AddListener(OnSignOutClicked);
-            emergencySignOutButton.gameObject.SetActive(true); // Always visible
+            emergencySignOutButton.gameObject.SetActive(true);
         }
 
-        // Optional debug button
         if (debugButton != null)
         {
             debugButton.onClick.AddListener(ShowDebugInfo);
         }
     }
 
-    // Debug: Show all available player info
-    public async void ShowDebugInfo()
+    void Update()
     {
-        if (!AuthenticationService.Instance.IsSignedIn)
+        // Press ESC key to sign out (for testing)
+        if (Input.GetKeyDown(KeyCode.Escape) && AuthenticationService.Instance.IsSignedIn)
         {
-            Debug.Log("Not signed in!");
-            return;
+            Debug.Log("ESC pressed - Signing out");
+            OnSignOutClicked();
         }
+    }
 
-        Debug.Log("=== PLAYER DEBUG INFO ===");
-        Debug.Log($"Player ID: {AuthenticationService.Instance.PlayerId}");
-        Debug.Log($"Username: {AuthenticationService.Instance.PlayerName}");
-        Debug.Log($"Access Token: {AuthenticationService.Instance.AccessToken.Substring(0, 50)}...");
+    // ==================== SCENE TRANSITION ====================
 
-        // Get additional player info
-        try
-        {
-            var playerInfo = await AuthenticationService.Instance.GetPlayerInfoAsync();
-            Debug.Log($"Created At: {playerInfo.CreatedAt}");
-            Debug.Log($"Identity Providers: {playerInfo.Identities?.Count ?? 0}");
+    async Task TransitionToGameScene()
+    {
+        statusText.text = $"Loading {gameSceneName}...";
+        Debug.Log($"Transitioning to {gameSceneName} in {transitionDelay} seconds");
 
-            if (playerInfo.Identities != null)
-            {
-                foreach (var identity in playerInfo.Identities)
-                {
-                    Debug.Log($"  - Provider: {identity.TypeId}");
-                }
-            }
-        }
-        catch (Exception e)
-        {
-            Debug.LogError($"Failed to get player info: {e.Message}");
-        }
+        await Task.Delay((int)(transitionDelay * 1000));
 
-        Debug.Log("========================");
+        SceneManager.LoadScene(gameSceneName);
     }
 
     // ==================== SIGN UP ====================
@@ -123,8 +113,8 @@ public class Authmanager : MonoBehaviour
     {
         string username = signUpUsernameInput.text;
         string password = signUpPasswordInput.text;
+        string confirmPassword = signUpConfirmPasswordInput.text;
 
-        // Check if already signed in
         if (AuthenticationService.Instance.IsSignedIn)
         {
             string currentUsername = AuthenticationService.Instance.PlayerName;
@@ -133,14 +123,18 @@ public class Authmanager : MonoBehaviour
             return;
         }
 
-        // Validate input
-        if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+        if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password) || string.IsNullOrEmpty(confirmPassword))
         {
-            statusText.text = "Please enter username and password";
+            statusText.text = "Please fill in all fields";
             return;
         }
 
-        // Validate password requirements
+        if (password != confirmPassword)
+        {
+            statusText.text = "Passwords do not match!";
+            return;
+        }
+
         if (password.Length < 8)
         {
             statusText.text = "Password must be at least 8 characters";
@@ -177,22 +171,31 @@ public class Authmanager : MonoBehaviour
 
         try
         {
-            // Sign up with username and password
             await AuthenticationService.Instance.SignUpWithUsernamePasswordAsync(username, password);
 
             Debug.Log("✓ Sign up successful!");
-            statusText.text = "Account created! Signing in...";
+            statusText.text = "Account created! Setting up profile...";
 
-          
-            Debug.Log("✓ Sign in successful!");
-            ShowSignedInState();
+            // IMPORTANT: Update the player name to the username
+            try
+            {
+                await AuthenticationService.Instance.UpdatePlayerNameAsync(username);
+                Debug.Log($"✓ Player name set to: {username}");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"Failed to set player name: {ex.Message}");
+            }
+
+            statusText.text = "✓ Signed in successfully!";
+
+            // Transition to game scene
+            await TransitionToGameScene();
         }
         catch (AuthenticationException ex)
         {
-            // Handle specific errors
             Debug.LogError("Sign up failed: " + ex.Message);
 
-            // Check error message for specific errors
             if (ex.Message.Contains("already exists") || ex.Message.Contains("already in use") || ex.Message.Contains("ENTITY_EXISTS"))
             {
                 statusText.text = "❌ Username already exists!\nTry a different username or sign in.";
@@ -223,7 +226,6 @@ public class Authmanager : MonoBehaviour
         string username = signInUsernameInput.text;
         string password = signInPasswordInput.text;
 
-        // Check if already signed in
         if (AuthenticationService.Instance.IsSignedIn)
         {
             string currentUsername = AuthenticationService.Instance.PlayerName;
@@ -232,7 +234,6 @@ public class Authmanager : MonoBehaviour
             return;
         }
 
-        // Validate input
         if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
         {
             statusText.text = "Please enter username and password";
@@ -244,17 +245,18 @@ public class Authmanager : MonoBehaviour
 
         try
         {
-            // Sign in with username and password
             await AuthenticationService.Instance.SignInWithUsernamePasswordAsync(username, password);
 
             Debug.Log("✓ Sign in successful!");
-            ShowSignedInState();
+            statusText.text = "✓ Signed in successfully!";
+
+            // Transition to game scene
+            await TransitionToGameScene();
         }
         catch (AuthenticationException ex)
         {
             Debug.LogError("Sign in failed: " + ex.Message);
 
-            // Check error message for specific errors
             if (ex.Message.Contains("not found") || ex.Message.Contains("does not exist"))
             {
                 statusText.text = "Account not found. Please sign up first.";
@@ -287,33 +289,51 @@ public class Authmanager : MonoBehaviour
         Debug.Log("✓ Signed out");
         statusText.text = "Signed out";
 
-        // Clear input fields
         signUpUsernameInput.text = "";
         signUpPasswordInput.text = "";
+        signUpConfirmPasswordInput.text = "";
         signInUsernameInput.text = "";
         signInPasswordInput.text = "";
 
         ShowSignUpPanel();
+        EnableAllButtons();
     }
 
-    // ==================== UPDATE PASSWORD ====================
+    // ==================== DEBUG ====================
 
-    public async void OnUpdatePasswordClicked(string oldPassword, string newPassword)
+    public async void ShowDebugInfo()
     {
-        statusText.text = "Updating password...";
+        if (!AuthenticationService.Instance.IsSignedIn)
+        {
+            Debug.Log("Not signed in!");
+            return;
+        }
+
+        Debug.Log("=== PLAYER DEBUG INFO ===");
+        Debug.Log($"Player ID: {AuthenticationService.Instance.PlayerId}");
+        Debug.Log($"Username: {AuthenticationService.Instance.PlayerName}");
+        Debug.Log($"Access Token: {AuthenticationService.Instance.AccessToken.Substring(0, 50)}...");
 
         try
         {
-            await AuthenticationService.Instance.UpdatePasswordAsync(oldPassword, newPassword);
+            var playerInfo = await AuthenticationService.Instance.GetPlayerInfoAsync();
+            Debug.Log($"Created At: {playerInfo.CreatedAt}");
+            Debug.Log($"Identity Providers: {playerInfo.Identities?.Count ?? 0}");
 
-            Debug.Log("✓ Password updated!");
-            statusText.text = "Password updated successfully!";
+            if (playerInfo.Identities != null)
+            {
+                foreach (var identity in playerInfo.Identities)
+                {
+                    Debug.Log($"  - Provider: {identity.TypeId}");
+                }
+            }
         }
-        catch (AuthenticationException ex)
+        catch (Exception e)
         {
-            Debug.LogError("Password update failed: " + ex.Message);
-            statusText.text = "Failed to update password: " + ex.Message;
+            Debug.LogError($"Failed to get player info: {e.Message}");
         }
+
+        Debug.Log("========================");
     }
 
     // ==================== UI MANAGEMENT ====================
@@ -325,6 +345,7 @@ public class Authmanager : MonoBehaviour
         signOutButton.gameObject.SetActive(false);
         switchToSignInButton.gameObject.SetActive(true);
         switchToSignUpButton.gameObject.SetActive(false);
+        EnableAllButtons();
     }
 
     void ShowSignInPanel()
@@ -334,19 +355,16 @@ public class Authmanager : MonoBehaviour
         signOutButton.gameObject.SetActive(false);
         switchToSignInButton.gameObject.SetActive(false);
         switchToSignUpButton.gameObject.SetActive(true);
+        EnableAllButtons();
     }
 
     void ShowSignedInState()
     {
-        // Hide sign up/in panels
         signUpPanel.SetActive(false);
         signInPanel.SetActive(false);
-
-        // Hide switch buttons
         switchToSignInButton.gameObject.SetActive(false);
         switchToSignUpButton.gameObject.SetActive(false);
 
-        // SHOW sign out button
         if (signOutButton != null)
         {
             signOutButton.gameObject.SetActive(true);
@@ -356,7 +374,6 @@ public class Authmanager : MonoBehaviour
             Debug.LogError("Sign Out Button is not assigned in Inspector!");
         }
 
-        // Display player info
         string playerId = AuthenticationService.Instance.PlayerId;
         string playerName = AuthenticationService.Instance.PlayerName;
 
