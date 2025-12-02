@@ -928,11 +928,11 @@ PlayerSettings:
   captureStartupLogs: {}
   activeInputHandler: 2
   windowsGamepadBackendHint: 0
-  cloudProjectId: 35eb3175-9253-4e5f-945d-6491fb8dca96
+  cloudProjectId: 114b3b4e-d4ba-4fe3-8e3d-d0b05e9d56c5
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: The_escapists
-  organizationId: salmiselim2016
+  projectName: BadIceCream
+  organizationId: unity_20a7b601378edcc0ccf0
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0
   hmiLoadingImage: {fileID: 0}

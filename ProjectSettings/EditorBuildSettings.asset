@@ -14,6 +14,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/testScenes/selim/gameScene.unity
     guid: 1ca112291d8c4784dbabecd418fdd50b
+  - enabled: 1
+    path: Assets/Scenes/testScenes/oumayma/gameScene.unity
+    guid: 9fb0008efebe2ee419a10e9b67efe8b1
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0
