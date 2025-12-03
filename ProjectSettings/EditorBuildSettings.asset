@@ -24,6 +24,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/testScenes/oumayma/gameScene.unity
     guid: 9fb0008efebe2ee419a10e9b67efe8b1
+  - enabled: 1
+    path: Assets/Scenes/testScenes/oumayma/VivoxTester/gameScene(testvivox).unity
+    guid: deac3525f0916df4195a2e2ec25594c8
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0
