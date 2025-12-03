@@ -36,6 +36,8 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
+
+
         timeRemaining = levelTime;
         isGameActive = true;
         currentLives = playerLives;
