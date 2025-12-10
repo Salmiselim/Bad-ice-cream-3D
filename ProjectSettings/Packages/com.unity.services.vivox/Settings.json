@@ -4,17 +4,17 @@
             {
                 "type": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
                 "key": "tokenKey",
-                "value": "{\"m_Value\":\"Hp7zkNl6dSKg70BZB49EQCeVR8ENHpPh\"}"
+                "value": "{\"m_Value\":\"b34In1GFImEWOBgTzEKTVwhoH2SwNDzM\"}"
             },
             {
                 "type": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
                 "key": "tokenIssuer",
-                "value": "{\"m_Value\":\"11270-badic-59024-udash\"}"
+                "value": "{\"m_Value\":\"11270-proje-85025-udash\"}"
             },
             {
                 "type": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
                 "key": "server",
-                "value": "{\"m_Value\":\"https://unity.vivox.com/appconfig/11270-badic-59024-udash\"}"
+                "value": "{\"m_Value\":\"https://unity.vivox.com/appconfig/11270-proje-85025-udash\"}"
             },
             {
                 "type": "System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",

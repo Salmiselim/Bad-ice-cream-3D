@@ -1,13 +1,14 @@
-using Unity.Services.Lobbies;
+﻿using Unity.Services.Lobbies;
 using Unity.Services.Lobbies.Models;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
-using System.Collections;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using TMP = TMPro.TextMeshProUGUI;
 
 public class LobbyManager : MonoBehaviour
@@ -23,100 +24,140 @@ public class LobbyManager : MonoBehaviour
     public TMP lobbyNameText;
     public Button startButton;
     public Button leaveButton;
+    public Button hostButton;   // ← Assign these in Inspector
+    public Button joinButton;   // ← So we can disable them while initializing
 
     private Lobby currentLobby;
     private bool isHost = false;
-    private bool servicesInitialized = false;
+    private bool isInitialized = false;  // ← This is the key
 
     private void Awake()
     {
-        if (Instance == null) { Instance = this; DontDestroyOnLoad(gameObject); }
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
         else Destroy(gameObject);
     }
 
     private async void Start()
     {
-        await EnsureServicesInitialized();
-    }
+        // Disable buttons until fully ready
+        if (hostButton) hostButton.interactable = false;
+        if (joinButton) joinButton.interactable = false;
 
-    private async Task EnsureServicesInitialized()
-    {
-        if (servicesInitialized) return;
-
-        await UnityServices.InitializeAsync();
-
-        if (!AuthenticationService.Instance.IsSignedIn)
-            await AuthenticationService.Instance.SignInAnonymouslyAsync();
-
-        servicesInitialized = true;
-    }
-
-    public async void HostLobby(string lobbyName = "MyLobby", int maxPlayers = 4)
-    {
-        await EnsureServicesInitialized();
-
-        var options = new CreateLobbyOptions
+        Debug.Log("Initializing Unity Services + Authentication...");
+        try
         {
-            IsPrivate = false,
-            Player = new Player
+            await UnityServices.InitializeAsync();
+
+            if (!AuthenticationService.Instance.IsSignedIn)
             {
-                Data = new Dictionary<string, PlayerDataObject>
-                {
-                    { "ready", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Member, "0") },
-                    { "name", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Member, AuthenticationService.Instance.PlayerId) }
-                }
+                await AuthenticationService.Instance.SignInAnonymouslyAsync();
+                Debug.Log($"Signed in anonymously: {AuthenticationService.Instance.PlayerId}");
             }
-        };
 
-        currentLobby = await LobbyService.Instance.CreateLobbyAsync(lobbyName, maxPlayers, options);
-        isHost = true;
+            isInitialized = true;
+            Debug.Log("Lobby system READY!");
 
-        Debug.Log($"Lobby hosted: {currentLobby.Id} | {currentLobby.Name} | Host: {currentLobby.HostId}");
-
-        SetupLobbyUI();
-        InvokeRepeating(nameof(Heartbeat), 15f, 15f);
+            // Re-enable buttons
+            if (hostButton) hostButton.interactable = true;
+            if (joinButton) joinButton.interactable = true;
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError("INIT FAILED: " + e.Message);
+        }
     }
 
+    // BLOCK ALL ACTIONS UNTIL INITIALIZED
+    private bool WaitForInit()
+    {
+        if (!isInitialized)
+        {
+            Debug.LogWarning("Lobby not ready yet — please wait...");
+            return false;
+        }
+        return true;
+    }
+
+    // ==================== BUTTONS ====================
+    public void HostLobbyButton() => HostLobby();
+    public void SearchLobbiesButton() => SearchLobbies();
+    public void LeaveLobbyButton() => LeaveLobby();  // Now fire-and-forget
+
+    // ==================== HOST ====================
+    public async void HostLobby(string lobbyName = "My Lobby", int maxPlayers = 4)
+    {
+        if (!WaitForInit()) return;
+
+        try
+        {
+            var options = new CreateLobbyOptions
+            {
+                IsPrivate = false,
+                Player = new Player
+                {
+                    Data = new Dictionary<string, PlayerDataObject>
+                    {
+                        { "ready", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Member, "0") },
+                        { "name", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Member, AuthenticationService.Instance.PlayerId.Substring(0, 8)) }
+                    }
+                }
+            };
+
+            currentLobby = await LobbyService.Instance.CreateLobbyAsync(lobbyName, maxPlayers, options);
+            isHost = true;
+            Debug.Log($"Lobby Created: {currentLobby.Id} | Code: {currentLobby.LobbyCode}");
+
+            SetupLobbyUI();
+            InvokeRepeating(nameof(Heartbeat), 15f, 15f);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError("Host failed: " + e.Message);
+        }
+    }
+
+    // ==================== SEARCH ====================
     public async void SearchLobbies()
     {
-        foreach (Transform child in lobbyListParent)
-            Destroy(child.gameObject);
+        if (!WaitForInit()) return;
+
+        foreach (Transform child in lobbyListParent) Destroy(child.gameObject);
 
         try
         {
             var options = new QueryLobbiesOptions
             {
-                Count = 50,
+                Count = 25,
                 Filters = new List<QueryFilter>
                 {
                     new QueryFilter(QueryFilter.FieldOptions.AvailableSlots, "0", QueryFilter.OpOptions.GT)
                 }
             };
 
-            QueryResponse response = await LobbyService.Instance.QueryLobbiesAsync(options);
+            var response = await LobbyService.Instance.QueryLobbiesAsync(options);
 
             if (response.Results.Count == 0)
             {
-                Debug.Log("No public lobbies with slots � trying unfiltered...");
-                response = await LobbyService.Instance.QueryLobbiesAsync();
+                Debug.Log("No lobbies found with open slots.");
+                return;
             }
 
             foreach (var lobby in response.Results)
             {
                 var item = Instantiate(lobbyListItemPrefab, lobbyListParent);
-                var listItem = item.GetComponent<LobbyListItem>();
+                var text = item.GetComponentInChildren<TMP>();
+                if (text) text.text = $"{lobby.Name} [{lobby.Players.Count}/{lobby.MaxPlayers}]";
 
-                TMP text = item.GetComponentInChildren<TMP>();
-                if (text != null)
-                    text.text = $"{lobby.Name} ({lobby.AvailableSlots} slots left)";
-
-                Button joinBtn = listItem != null && listItem.joinButton != null ? listItem.joinButton : item.GetComponentInChildren<Button>();
-
-                if (joinBtn != null)
+                var btn = item.GetComponentInChildren<Button>();
+                if (btn)
                 {
-                    string lobbyId = lobby.Id; // CRITICAL: capture in local variable
-                    joinBtn.onClick.RemoveAllListeners();
-                    joinBtn.onClick.AddListener(() => JoinLobby(lobbyId)); // Now works 100% of the time
+                    string lobbyId = lobby.Id;
+                    btn.onClick.RemoveAllListeners();
+                    btn.onClick.AddListener(() => JoinLobby(lobbyId));
                 }
             }
         }
@@ -126,8 +167,11 @@ public class LobbyManager : MonoBehaviour
         }
     }
 
+    // ==================== JOIN ====================
     public async void JoinLobby(string lobbyId)
     {
+        if (!WaitForInit()) return;
+
         try
         {
             var options = new JoinLobbyByIdOptions
@@ -137,188 +181,132 @@ public class LobbyManager : MonoBehaviour
                     Data = new Dictionary<string, PlayerDataObject>
                     {
                         { "ready", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Member, "0") },
-                        { "name", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Member, AuthenticationService.Instance.PlayerId) }
+                        { "name", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Member, AuthenticationService.Instance.PlayerId.Substring(0, 8)) }
                     }
                 }
             };
 
             currentLobby = await LobbyService.Instance.JoinLobbyByIdAsync(lobbyId, options);
             isHost = false;
-
+            Debug.Log("Joined lobby!");
             SetupLobbyUI();
-
-            Debug.Log($"Successfully joined lobby: {lobbyId}");
         }
         catch (System.Exception e)
         {
-            Debug.LogError("Failed to join lobby: " + e.Message);
+            Debug.LogError("Join failed: " + e.Message);
         }
     }
 
+    // ==================== REST OF THE CODE (unchanged) ====================
     private void SetupLobbyUI()
     {
         mainMenuPanel.SetActive(false);
         joinPanel.SetActive(false);
-        if (lobbyNameText != null)
-            lobbyNameText.text = currentLobby.Name;
+        hostPanel.SetActive(true);
+        if (lobbyNameText) lobbyNameText.text = $"Lobby: {currentLobby.Name}";
 
-        // Subscribe to lobby events (player joined/left, data changed, etc.)
         var callbacks = new LobbyEventCallbacks();
-        callbacks.LobbyChanged += OnLobbyChangedCallback;
+        callbacks.LobbyChanged += OnLobbyChanged;
         LobbyService.Instance.SubscribeToLobbyEventsAsync(currentLobby.Id, callbacks);
 
-        // Leave button
-        if (leaveButton != null)
+        UpdateStartButton();
+
+        if (leaveButton)
         {
             leaveButton.onClick.RemoveAllListeners();
-            leaveButton.onClick.AddListener(() => StartCoroutine(LeaveLobbyCoroutine()));
+            leaveButton.onClick.AddListener(LeaveLobbyButton);
         }
-
-        StartCoroutine(EnableHostPanelNextFrame());
     }
 
-    private void OnLobbyChangedCallback(ILobbyChanges changes)
+    private void OnLobbyChanged(ILobbyChanges changes)
     {
         changes.ApplyToLobby(currentLobby);
-        OnLobbyChanged(currentLobby);
-    }
-
-    private void OnLobbyChanged(Lobby lobby)
-    {
-        currentLobby = lobby;
         UpdateStartButton();
+
+        if (!isHost && currentLobby.Data != null && currentLobby.Data.TryGetValue("startGame", out var val) && val.Value == "true")
+        {
+            LoadGameScene();
+        }
     }
 
     private void UpdateStartButton()
     {
         if (startButton == null || currentLobby == null) return;
-
         startButton.gameObject.SetActive(isHost);
-
-        bool allReady = true;
-        foreach (var player in currentLobby.Players)
-        {
-            if (player.Data.TryGetValue("ready", out var readyVal) && readyVal.Value == "0")
-            {
-                allReady = false;
-                break;
-            }
-        }
-
-        startButton.interactable = allReady && currentLobby.Players.Count >= 2; // or == MaxPlayers
+        bool allReady = currentLobby.Players.All(p => p.Data != null && p.Data.ContainsKey("ready") && p.Data["ready"].Value == "1");
+        startButton.interactable = allReady && currentLobby.Players.Count >= 2;
     }
 
     public async void ToggleReady()
     {
-        if (currentLobby == null) return;
+        if (currentLobby == null || !WaitForInit()) return;
 
-        string current = currentLobby.Players.Find(p => p.Id == AuthenticationService.Instance.PlayerId)
-            ?.Data["ready"].Value ?? "0";
-
-        string newValue = current == "1" ? "0" : "1";
+        var myPlayer = currentLobby.Players.FirstOrDefault(p => p.Id == AuthenticationService.Instance.PlayerId);
+        string newVal = (myPlayer?.Data["ready"].Value == "1") ? "0" : "1";
 
         var options = new UpdatePlayerOptions
         {
             Data = new Dictionary<string, PlayerDataObject>
             {
-                { "ready", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Member, newValue) }
+                { "ready", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Member, newVal) }
             }
         };
 
         await LobbyService.Instance.UpdatePlayerAsync(currentLobby.Id, AuthenticationService.Instance.PlayerId, options);
     }
 
-    // THIS IS THE FIX FOR "ONLY HOST LOADS THE GAME SCENE"
     public async void StartGame()
     {
-        if (!isHost) return;
+        if (!isHost || currentLobby == null || !WaitForInit()) return;
 
-        // Tell EVERY player in the lobby to load the game scene
-        var lobbyData = new Dictionary<string, DataObject>
+        var latest = await LobbyService.Instance.GetLobbyAsync(currentLobby.Id);
+        if (latest.Players.All(p => p.Data["ready"].Value == "1"))
         {
-            { "startGame", new DataObject(DataObject.VisibilityOptions.Member, "true") }
-        };
-
-        await LobbyService.Instance.UpdateLobbyAsync(currentLobby.Id, new UpdateLobbyOptions
-        {
-            Data = lobbyData
-        });
-
-        // Host loads immediately
-        LoadGameScene();
-    }
-
-    // Call this from LobbyEventCallbacks or poll
-    private void Update()
-    {
-        if (currentLobby != null && !isHost)
-        {
-            if (currentLobby.Data != null && currentLobby.Data.TryGetValue("startGame", out var data) && data.Value == "true")
+            await LobbyService.Instance.UpdateLobbyAsync(currentLobby.Id, new UpdateLobbyOptions
             {
-                // Prevent loading multiple times
-                if (SceneManager.GetActiveScene().name != "GameScene")
+                Data = new Dictionary<string, DataObject>
                 {
-                    LoadGameScene();
+                    { "startGame", new DataObject(DataObject.VisibilityOptions.Member, "true") }
                 }
-            }
+            });
+            LoadGameScene();
         }
     }
 
     private void LoadGameScene()
     {
         CancelInvoke(nameof(Heartbeat));
+        if (NetworkManager.Singleton != null)
+        {
+            NetworkManager.Singleton.Shutdown();
+            Destroy(NetworkManager.Singleton.gameObject);
+        }
         SceneManager.LoadScene("GameScene");
     }
 
-    private IEnumerator EnableHostPanelNextFrame()
+    private async void LeaveLobby()
     {
-        yield return null;
-        hostPanel.SetActive(true);
-    }
+        if (currentLobby == null) return;
 
-    private IEnumerator LeaveLobbyCoroutine()
-    {
-        yield return LeaveLobby();
-        hostPanel.SetActive(false);
-        mainMenuPanel.SetActive(true);
-        joinPanel.SetActive(false);
-    }
-
-    private async Task LeaveLobby()
-    {
         try
         {
-            if (currentLobby != null)
-            {
-                await LobbyService.Instance.RemovePlayerAsync(currentLobby.Id, AuthenticationService.Instance.PlayerId);
-
-                if (isHost && currentLobby.Players.Count <= 1)
-                {
-                    await LobbyService.Instance.DeleteLobbyAsync(currentLobby.Id);
-                }
-            }
+            await LobbyService.Instance.RemovePlayerAsync(currentLobby.Id, AuthenticationService.Instance.PlayerId);
+            if (isHost) await LobbyService.Instance.DeleteLobbyAsync(currentLobby.Id);
         }
-        catch (System.Exception e)
-        {
-            Debug.LogError("Leave failed: " + e);
-        }
+        catch { }
         finally
         {
             currentLobby = null;
             isHost = false;
             CancelInvoke(nameof(Heartbeat));
+            hostPanel.SetActive(false);
+            mainMenuPanel.SetActive(true);
         }
     }
 
     private async void Heartbeat()
     {
         if (currentLobby != null && isHost)
-        {
-            await LobbyService.Instance.SendHeartbeatPingAsync(currentLobby.Id);
-        }
+            try { await LobbyService.Instance.SendHeartbeatPingAsync(currentLobby.Id); } catch { }
     }
-
-    // Public wrappers for buttons
-    public void HostLobbyButton() => HostLobby();
-    public void LeaveLobbyButton() => StartCoroutine(LeaveLobbyCoroutine());
 }

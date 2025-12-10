@@ -231,7 +231,6 @@
       },
       "url": "https://packages.unity.com"
     },
-<<<<<<< Updated upstream
     "com.unity.services.vivox": {
       "version": "16.7.0",
       "depth": 0,
@@ -247,7 +246,10 @@
     "com.unity.settings-manager": {
       "version": "2.1.0",
       "depth": 1,
-=======
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
     "com.unity.services.deployment": {
       "version": "1.6.2",
       "depth": 1,
@@ -261,13 +263,10 @@
     "com.unity.services.deployment.api": {
       "version": "1.1.2",
       "depth": 2,
->>>>>>> Stashed changes
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"
     },
-<<<<<<< Updated upstream
-=======
     "com.unity.services.multiplayer": {
       "version": "1.2.0",
       "depth": 0,
@@ -309,7 +308,6 @@
       },
       "url": "https://packages.unity.com"
     },
->>>>>>> Stashed changes
     "com.unity.shadergraph": {
       "version": "17.2.0",
       "depth": 1,
