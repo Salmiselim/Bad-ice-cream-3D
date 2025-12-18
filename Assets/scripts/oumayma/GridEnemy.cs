@@ -1,8 +1,7 @@
 using UnityEngine;
-using Unity.Netcode;
 using System.Collections;
 
-public class GridEnemy : NetworkBehaviour
+public class GridEnemy : MonoBehaviour
 {
     [Header("Movement Settings")]
     public float moveSpeed = 3.5f;
@@ -18,21 +17,29 @@ public class GridEnemy : NetworkBehaviour
     private Vector2Int currentGridPos;
     private float nextThinkTime = 0f;
 
-    public override void OnNetworkSpawn()
+
+
+    void Start()
     {
         if (gridManager == null)
+        {
             gridManager = FindFirstObjectByType<GridManager>();
+        }
 
-        // Find player - prefer the one with authority (host or client player)
-        // We'll just find any object with "Player" tag - works for 2-player
-        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null)
+        {
             player = playerObj.transform;
+        }
+        else
+        {
+            Debug.LogError("Player not found! Make sure player has 'Player' tag.");
+        }
 
         StartCoroutine(InitializeEnemy());
     }
 
-    IEnumerator InitializeEnemy()
+    System.Collections.IEnumerator InitializeEnemy()
     {
         yield return new WaitForEndOfFrame();
 
@@ -41,19 +48,13 @@ public class GridEnemy : NetworkBehaviour
         worldPos.y = transform.position.y;
         transform.position = worldPos;
         targetPosition = worldPos;
+
+        Debug.Log($"Enemy initialized at grid position: {currentGridPos}");
     }
 
     void Update()
     {
-        // Only the server runs AI logic
-        if (!IsServer)
-        {
-            // Clients only follow the synced position (NetworkTransform handles this)
-            return;
-        }
-
         if (!GameManager.Instance.IsGameActive) return;
-
         if (isMoving)
         {
             MoveToTarget();
@@ -87,24 +88,36 @@ public class GridEnemy : NetworkBehaviour
 
         if (Mathf.Abs(deltaX) > Mathf.Abs(deltaZ))
         {
-            Vector2Int horizontal = new Vector2Int(deltaX > 0 ? 1 : -1, 0);
-            if (CanMoveTo(currentGridPos + horizontal)) return horizontal;
+            Vector2Int horizontalMove = new Vector2Int(deltaX > 0 ? 1 : -1, 0);
 
-            if (deltaZ != 0)
+            if (CanMoveTo(currentGridPos + horizontalMove))
             {
-                Vector2Int vertical = new Vector2Int(0, deltaZ > 0 ? 1 : -1);
-                if (CanMoveTo(currentGridPos + vertical)) return vertical;
+                return horizontalMove;
+            }
+            else if (deltaZ != 0)
+            {
+                Vector2Int verticalMove = new Vector2Int(0, deltaZ > 0 ? 1 : -1);
+                if (CanMoveTo(currentGridPos + verticalMove))
+                {
+                    return verticalMove;
+                }
             }
         }
         else if (Mathf.Abs(deltaZ) > 0)
         {
-            Vector2Int vertical = new Vector2Int(0, deltaZ > 0 ? 1 : -1);
-            if (CanMoveTo(currentGridPos + vertical)) return vertical;
+            Vector2Int verticalMove = new Vector2Int(0, deltaZ > 0 ? 1 : -1);
 
-            if (deltaX != 0)
+            if (CanMoveTo(currentGridPos + verticalMove))
             {
-                Vector2Int horizontal = new Vector2Int(deltaX > 0 ? 1 : -1, 0);
-                if (CanMoveTo(currentGridPos + horizontal)) return horizontal;
+                return verticalMove;
+            }
+            else if (deltaX != 0)
+            {
+                Vector2Int horizontalMove = new Vector2Int(deltaX > 0 ? 1 : -1, 0);
+                if (CanMoveTo(currentGridPos + horizontalMove))
+                {
+                    return horizontalMove;
+                }
             }
         }
 
@@ -113,49 +126,70 @@ public class GridEnemy : NetworkBehaviour
 
     Vector2Int GetRandomValidDirection()
     {
-        Vector2Int[] dirs = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
-        for (int i = dirs.Length - 1; i > 0; i--)
+        Vector2Int[] directions = {
+            Vector2Int.up,
+            Vector2Int.down,
+            Vector2Int.left,
+            Vector2Int.right
+        };
+
+        for (int i = 0; i < directions.Length; i++)
         {
-            int j = Random.Range(0, i + 1);
-            var temp = dirs[i];
-            dirs[i] = dirs[j];
-            dirs[j] = temp;
+            int randomIndex = Random.Range(i, directions.Length);
+            Vector2Int temp = directions[i];
+            directions[i] = directions[randomIndex];
+            directions[randomIndex] = temp;
         }
 
-        foreach (var dir in dirs)
+        foreach (Vector2Int dir in directions)
         {
             if (CanMoveTo(currentGridPos + dir))
+            {
                 return dir;
+            }
         }
+
         return Vector2Int.zero;
     }
 
-    bool CanMoveTo(Vector2Int pos)
+    bool CanMoveTo(Vector2Int gridPos)
     {
-        if (!gridManager.IsValidPosition(pos.x, pos.y)) return false;
-        return gridManager.IsTileWalkable(pos.x, pos.y);
+        if (!gridManager.IsValidPosition(gridPos.x, gridPos.y))
+        {
+            return false;
+        }
+
+        return gridManager.IsTileWalkable(gridPos.x, gridPos.y);
     }
 
     void TryMove(Vector2Int direction)
     {
-        Vector2Int next = currentGridPos + direction;
-        if (!CanMoveTo(next)) return;
+        Vector2Int nextGridPos = currentGridPos + direction;
 
-        currentGridPos = next;
-        targetPosition = gridManager.GridToWorldPosition(currentGridPos.x, currentGridPos.y);
-        targetPosition.y = transform.position.y;
-        isMoving = true;
-
-        if (direction != Vector2Int.zero)
+        if (CanMoveTo(nextGridPos))
         {
-            Vector3 lookDir = new Vector3(direction.x, 0, direction.y);
-            transform.rotation = Quaternion.LookRotation(lookDir);
+            currentGridPos = nextGridPos;
+
+            targetPosition = gridManager.GridToWorldPosition(currentGridPos.x, currentGridPos.y);
+            targetPosition.y = transform.position.y;
+
+            isMoving = true;
+
+            if (direction != Vector2Int.zero)
+            {
+                Vector3 lookDirection = new Vector3(direction.x, 0, direction.y);
+                transform.rotation = Quaternion.LookRotation(lookDirection);
+            }
         }
     }
 
     void MoveToTarget()
     {
-        transform.position = Vector3.MoveTowards(transform.position, targetPosition, moveSpeed * Time.deltaTime);
+        transform.position = Vector3.MoveTowards(
+            transform.position,
+            targetPosition,
+            moveSpeed * Time.deltaTime
+        );
 
         if (Vector3.Distance(transform.position, targetPosition) < 0.01f)
         {
@@ -164,10 +198,8 @@ public class GridEnemy : NetworkBehaviour
         }
     }
 
-    private void OnTriggerEnter(Collider other)
+    void OnTriggerEnter(Collider other)
     {
-        if (!IsServer) return; // Only server detects collision
-
         if (other.CompareTag("Player"))
         {
             Debug.Log("Enemy caught the player!");

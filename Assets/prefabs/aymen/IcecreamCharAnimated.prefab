@@ -7936,8 +7936,8 @@ GameObject:
   - component: {fileID: 7548286481768458078}
   - component: {fileID: 7340296574081362263}
   - component: {fileID: 4748025315478646153}
-  - component: {fileID: 7226252070181032421}
   - component: {fileID: 4844746384864239178}
+  - component: {fileID: 7226252070181032421}
   - component: {fileID: 4413874934557348494}
   - component: {fileID: 1905858595095612383}
   - component: {fileID: -5150833918446144222}
@@ -8016,6 +8016,28 @@ CapsuleCollider:
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &4844746384864239178
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7172886465293155812}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e76f264c0ed993f48a1c250e2d62ac7c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerController
+  moveSpeed: 8
+  tileSize: 1
+  maxIceLineLength: 5
+  iceCreationDelay: 0.1
+  iceBlockPrefab: {fileID: 6346982537498217272, guid: 7f3c551f1b318b64eba9bf46108029a6, type: 3}
+  gridManager: {fileID: 0}
+  animator: {fileID: 0}
+  targetPosition: {x: 0, y: 0, z: 0}
+  currentGridPos: {x: 0, y: 0}
+  spawnGridPosition: {x: 1, y: 1}
 --- !u!114 &7226252070181032421
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8041,29 +8063,6 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
---- !u!114 &4844746384864239178
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7172886465293155812}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e76f264c0ed993f48a1c250e2d62ac7c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerController
-  ShowTopMostFoldoutHeaderGroup: 1
-  moveSpeed: 8
-  tileSize: 1
-  maxIceLineLength: 5
-  iceCreationDelay: 0.1
-  iceBlockPrefab: {fileID: 6346982537498217272, guid: 7f3c551f1b318b64eba9bf46108029a6, type: 3}
-  gridManager: {fileID: 0}
-  animator: {fileID: 0}
-  targetPosition: {x: 0, y: 0, z: 0}
-  currentGridPos: {x: 0, y: 0}
-  spawnGridPosition: {x: 1, y: 1}
 --- !u!114 &4413874934557348494
 MonoBehaviour:
   m_ObjectHideFlags: 0

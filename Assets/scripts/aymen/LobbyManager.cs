@@ -210,7 +210,6 @@ public class LobbyManager : MonoBehaviour
         LobbyService.Instance.SubscribeToLobbyEventsAsync(currentLobby.Id, callbacks);
 
         UpdateStartButton();
-        UpdatePlayerList();
 
         if (leaveButton)
         {
@@ -223,7 +222,6 @@ public class LobbyManager : MonoBehaviour
     {
         changes.ApplyToLobby(currentLobby);
         UpdateStartButton();
-        UpdatePlayerList();
 
         if (!isHost && currentLobby.Data != null && currentLobby.Data.TryGetValue("startGame", out var val) && val.Value == "true")
         {
@@ -310,54 +308,5 @@ public class LobbyManager : MonoBehaviour
     {
         if (currentLobby != null && isHost)
             try { await LobbyService.Instance.SendHeartbeatPingAsync(currentLobby.Id); } catch { }
-    }
-
-    [Header("Player List UI")]
-    public Transform playerListContent;     // Drag the Content of your ScrollView here
-    public GameObject playerItemPrefab;     // Drag your PlayerItemPrefab here
-    private Dictionary<string, GameObject> playerListItems = new Dictionary<string, GameObject>();
-    private void UpdatePlayerList()
-    {
-        if (currentLobby == null) return;
-
-        // Clear old entries (except those still in lobby)
-        var currentPlayerIds = new HashSet<string>(currentLobby.Players.Select(p => p.Id));
-        var toRemove = new List<string>();
-        foreach (var id in playerListItems.Keys)
-        {
-            if (!currentPlayerIds.Contains(id))
-                toRemove.Add(id);
-        }
-        foreach (var id in toRemove)
-        {
-            Destroy(playerListItems[id]);
-            playerListItems.Remove(id);
-        }
-
-        // Add or update players
-        foreach (var player in currentLobby.Players)
-        {
-            string playerId = player.Id;
-            string playerName = player.Data?.ContainsKey("name") == true
-                ? player.Data["name"].Value
-                : playerId.Substring(0, 8);  // fallback
-
-            string readyStatus = player.Data?.ContainsKey("ready") == true && player.Data["ready"].Value == "1"
-                ? "✓ Ready"
-                : "✗ Not Ready";
-
-            if (playerListItems.TryGetValue(playerId, out GameObject item))
-            {
-                // Update existing
-                item.GetComponent<TMP>().text = $"{playerName} - {readyStatus}";
-            }
-            else
-            {
-                // Create new
-                var newItem = Instantiate(playerItemPrefab, playerListContent);
-                newItem.GetComponent<TMP>().text = $"{playerName} - {readyStatus}";
-                playerListItems[playerId] = newItem;
-            }
-        }
     }
 }

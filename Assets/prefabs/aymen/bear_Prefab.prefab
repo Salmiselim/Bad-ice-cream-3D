@@ -12772,8 +12772,8 @@ GameObject:
   - component: {fileID: 8388384821994013087}
   - component: {fileID: 7709142225938070213}
   - component: {fileID: 4780567328730226323}
-  - component: {fileID: 2349765960641453054}
   - component: {fileID: 2645890451514017688}
+  - component: {fileID: 2349765960641453054}
   - component: {fileID: -7858261564137916890}
   - component: {fileID: -5731134214622689799}
   - component: {fileID: 2666861348517097686}
@@ -12861,6 +12861,22 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 116
   m_CollisionDetection: 0
+--- !u!114 &2645890451514017688
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9160980394635107109}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b6832121d3d67347aa8eb1eafb97a05, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GridEnemy
+  moveSpeed: 3.5
+  tileSize: 1
+  thinkDelay: 0.5
+  gridManager: {fileID: 0}
 --- !u!114 &2349765960641453054
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -12886,23 +12902,6 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
---- !u!114 &2645890451514017688
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9160980394635107109}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5b6832121d3d67347aa8eb1eafb97a05, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GridEnemy
-  ShowTopMostFoldoutHeaderGroup: 1
-  moveSpeed: 3.5
-  tileSize: 1
-  thinkDelay: 0.5
-  gridManager: {fileID: 0}
 --- !u!114 &-7858261564137916890
 MonoBehaviour:
   m_ObjectHideFlags: 0

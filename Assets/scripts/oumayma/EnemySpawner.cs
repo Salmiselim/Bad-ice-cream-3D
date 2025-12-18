@@ -1,6 +1,4 @@
 using UnityEngine;
-using Unity.Netcode;
-using System.Collections;
 
 public class EnemySpawner : MonoBehaviour
 {
@@ -11,75 +9,45 @@ public class EnemySpawner : MonoBehaviour
     [Header("References")]
     public GridManager gridManager;
 
-    private bool hasSpawned = false; // Prevent double spawn
-
-    private void Start()
+    void Start()
     {
-        if (hasSpawned) return;
-        StartCoroutine(WaitAndSpawn());
+        if (gridManager == null)
+        {
+            gridManager = FindFirstObjectByType<GridManager>();
+        }
+
+        Invoke("SpawnEnemy", 0.5f);
     }
 
-    private IEnumerator WaitAndSpawn()
+    void SpawnEnemy()
     {
-        Debug.Log("[EnemySpawner] Starting wait coroutine");
-
-        // Wait for NetworkManager to exist
-        while (NetworkManager.Singleton == null)
+        if (enemyPrefab == null)
         {
-            Debug.Log("[EnemySpawner] Waiting for NetworkManager.Singleton...");
-            yield return new WaitForSeconds(0.2f);
+            Debug.LogError("Enemy prefab not assigned to EnemySpawner!");
+            return;
         }
-
-        Debug.Log("[EnemySpawner] NetworkManager found: " + NetworkManager.Singleton.gameObject.name);
-
-        // Wait for server mode
-        while (!NetworkManager.Singleton.IsServer)
-        {
-            Debug.Log("[EnemySpawner] Waiting for IsServer = true (current: " + NetworkManager.Singleton.IsServer + ")");
-            yield return new WaitForSeconds(0.2f);
-        }
-
-        if (hasSpawned)
-            yield break;
-
-        hasSpawned = true;
-        Debug.Log("[EnemySpawner] HOST CONFIRMED — spawning enemy");
 
         if (gridManager == null)
         {
-            gridManager = FindObjectOfType<GridManager>();
-            if (gridManager == null)
-            {
-                Debug.LogError("[EnemySpawner] NO GRIDMANAGER IN SCENE!");
-                yield break;
-            }
+            Debug.LogError("GridManager not found!");
+            return;
         }
 
-        if (enemyPrefab == null)
-        {
-            Debug.LogError("[EnemySpawner] enemyPrefab not assigned in Inspector!");
-            yield break;
-        }
+        Vector3 spawnWorldPos = gridManager.GridToWorldPosition(
+            enemySpawnGridPos.x,
+            enemySpawnGridPos.y
+        );
+        spawnWorldPos.y = 0.3f;
 
-        Vector3 pos = gridManager.GridToWorldPosition(enemySpawnGridPos.x, enemySpawnGridPos.y);
-        pos.y = 0.3f;
-
-        GameObject enemy = Instantiate(enemyPrefab, pos, Quaternion.identity);
+        GameObject enemy = Instantiate(enemyPrefab, spawnWorldPos, Quaternion.identity);
         enemy.name = "Enemy";
 
-        NetworkObject netObj = enemy.GetComponent<NetworkObject>();
-        if (netObj == null)
+        GridEnemy enemyScript = enemy.GetComponent<GridEnemy>();
+        if (enemyScript != null)
         {
-            Debug.LogError("[EnemySpawner] enemyPrefab missing NetworkObject component!");
-            Destroy(enemy);
-            yield break;
+            enemyScript.gridManager = gridManager;
         }
 
-        netObj.Spawn();
-        Debug.Log("[EnemySpawner] Enemy spawned and replicated!");
-
-        GridEnemy script = enemy.GetComponent<GridEnemy>();
-        if (script != null)
-            script.gridManager = gridManager;
+        Debug.Log($"Enemy spawned at grid position {enemySpawnGridPos}");
     }
 }
